@@ -10,18 +10,35 @@ class BookController extends Controller
     /**
      * წიგნების სიის გამოტანა (ძებნის ფილტრით)
      */
-    public function index(Request $request) // იღებს შემოსულ HTTP მოთხოვნას
-    {
-        // ამოვიღებთ 'title' პარამეტრს URL-იდან (მაგ: ?title=harry)
-        $title = $request->input('title');
+public function index(Request $request)
+{
+    // იღებს ძებნის სათაურს URL-იდან (თუ მითითებულია)
+    $title = $request->input('title');
+    
+    // იღებს ფილტრს URL-იდან, თუ არ არის - მიანიჭებს ცარიელ ტექსტს ('')
+    $filter = $request->input('filter', '');
 
-        // თუ $title არსებობს, ემატება ძებნის ფილტრი (scopeTitle), ბოლოს მოაქვს შედეგი
-        $books = Book::when($title, fn($query, $title) => $query->title($title))
-            ->get();
+    // იწყებს Query Builder-ს და სურვილისამებრ ფილტრავს სათაურით
+    $books = Book::when(
+        $title,
+        fn($query, $title) => $query->title($title)
+    );
 
-        // აბრუნებს Blade შაბლონს და გადასცემს $books ცვლადს
-        return view('books.index', compact('books'));
-    }
+    // match-ით ირჩევს შესაბამის Scope-ს და ამატებს არსებულ მოთხოვნას
+    $books = match ($filter) {
+        'popular_last_month' => $books->popularLastMonth(),
+        'popular_last_6months' => $books->popularLast6Months(),
+        'highest_rated_last_month' => $books->highestRatedLastMonth(),
+        'highest_rated_last_6months' => $books->highestRatedLast6Months(),
+        default => $books->latest(),
+    };
+
+    // მხოლოდ ახლა სრულდება მოთხოვნა ბაზაში ->get()-ის მეშვეობით
+    $books = $books->get();
+
+    // აბრუნებს index.blade.php შაბლონს წიგნების მონაცემებით
+    return view('books.index', ['books' => $books]);
+}
 
 
     /**

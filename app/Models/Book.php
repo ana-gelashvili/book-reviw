@@ -66,4 +66,45 @@ class Book extends Model
             $query->whereBetween('created_at', [$from, $to]);
         }
     }
+
+    
+    // ბოლო 1 თვის პოპულარული წიგნები (მინიმუმ 2 შეფასებით)
+   
+    public function scopePopularLastMonth(Builder $query): Builder|QueryBuilder
+   {
+    return $query->popular(now()->subMonth(), now())      // 1. ითვლის ბოლო 1 თვის მიმოხილვებს და ახდენს სორტირებას რაოდენობით
+                ->highestRated(now()->subMonth(), now())  // 2. ითვლის საშუალო ქულას (გამოიყენება მეორად სორტირებად)
+                ->minReviews(2);                          // 3. ტოვებს მხოლოდ იმ წიგნებს, რომელთაც აქვთ მინიმუმ 2 შეფასება
+   }
+   
+
+   
+  //  ბოლო 6 თვის პოპულარული წიგნები (მინიმუმ 5 შეფასებით)
+ 
+   public function scopePopularLast6Months(Builder $query): Builder|QueryBuilder
+  {
+    return $query->popular(now()->subMonths(6), now())     // 1. ითვლის ბოლო 6 თვის მიმოხილვებს და ახდენს სორტირებას რაოდენობით
+                ->highestRated(now()->subMonths(6), now()) // 2. ითვლის საშუალო ქულას (გამოიყენება მეორად სორტირებად)
+                ->minReviews(5);                         // 3. ტოვებს მხოლოდ იმ წიგნებს, რომელთაც აქვთ მინიმუმ 5 შეფასება
+  } 
+   
+  
+  //  ბოლო 1 თვის ყველაზე მაღალრეიტინგული წიგნები (მინიმუმ 2 შეფასებით)
+ 
+public function scopeHighestRatedLastMonth(Builder $query): Builder|QueryBuilder
+   {
+    return $query->highestRated(now()->subMonth(), now()) // 1. ითვლის ბოლო 1 თვის საშუალო ქულას და ახდენს სორტირებას რეიტინგით (მაღალიდან დაბლისკენ)
+                ->popular(now()->subMonth(), now())      // 2. ითვლის მიმოხილვების რაოდენობას (გამოიყენება მეორად სორტირებად, თუ ქულები ტოლია)
+                ->minReviews(2);                          // 3. ტოვებს მხოლოდ იმ წიგნებს, რომელთაც აქვთ მინიმუმ 2 შეფასება
+    }
+
+    
+  //  ბოლო 6 თვის ყველაზე მაღალრეიტინგული წიგნები (მინიმუმ 5 შეფასებით)
+ 
+public function scopeHighestRatedLast6Months(Builder $query): Builder|QueryBuilder
+  {
+    return $query->highestRated(now()->subMonths(6), now()) // 1. ითვლის ბოლო 6 თვის საშუალო ქულას და ახდენს სორტირებას რეიტინგით (მაღალიდან დაბლისკენ)
+                ->popular(now()->subMonths(6), now())      // 2. ითვლის მიმოხილვების რაოდენობას (გამოიყენება მეორად სორტირებად, თუ ქულები ტოლია)
+                ->minReviews(5);                          // 3. ტოვებს მხოლოდ იმ წიგნებს, რომელთაც აქვთ მინიმუმ 5 შეფასება
+  }
 }
