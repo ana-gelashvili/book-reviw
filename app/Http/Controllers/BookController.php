@@ -2,44 +2,43 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Book; // შემოგვაქვს Book მოდელი
+use App\Models\Book;
 use Illuminate\Http\Request;
 
 class BookController extends Controller
 {
     /**
-     * წიგნების სიის გამოტანა (ძებნის ფილტრით)
+     * წიგნების სიის გამოტანა (ძებნის ფილტრით და ქეშირებით)
      */
-public function index(Request $request)
-{
-    // იღებს ძებნის სათაურს URL-იდან (თუ მითითებულია)
-    $title = $request->input('title');
+   public function index(Request $request)
+    {
+        $title = $request->input('title', '');
+        $filter = $request->input('filter', '');
+
+        // 1. ცარიელი ფილტრის დროს ნაგულისხმევ გასაღებად ავიღოთ 'latest'
+        $filterKey = $filter ?: 'latest';
+        $cacheKey = 'books:' . $filterKey . ':' . $title;
+
+        // 2. ქეშირება
+        $books = cache()->remember($cacheKey, 3600, function () use ($title, $filter) {
+            $query = Book::when(
+                $title,
+                fn($q, $title) => $q->title($title)
+            );
+
+            return match ($filter) {
+                'popular_last_month' => $query->popularLastMonth()->get(),
+                'popular_last_6months' => $query->popularLast6Months()->get(),
+                'highest_rated_last_month' => $query->highestRatedLastMonth()->get(),
+                'highest_rated_last_6months' => $query->highestRatedLast6Months()->get(),
+                default => $query->latest()->withAvgRating()->withReviewsCount()->get(),
+            };
+        });
+
+        return view('books.index', ['books' => $books]);
     
-    // იღებს ფილტრს URL-იდან, თუ არ არის - მიანიჭებს ცარიელ ტექსტს ('')
-    $filter = $request->input('filter', '');
-
-    // იწყებს Query Builder-ს და სურვილისამებრ ფილტრავს სათაურით
-    $books = Book::when(
-        $title,
-        fn($query, $title) => $query->title($title)
-    );
-
-    // match-ით ირჩევს შესაბამის Scope-ს და ამატებს არსებულ მოთხოვნას
-    $books = match ($filter) {
-        'popular_last_month' => $books->popularLastMonth(),
-        'popular_last_6months' => $books->popularLast6Months(),
-        'highest_rated_last_month' => $books->highestRatedLastMonth(),
-        'highest_rated_last_6months' => $books->highestRatedLast6Months(),
-        default => $books->latest(),
-    };
-
-    // მხოლოდ ახლა სრულდება მოთხოვნა ბაზაში ->get()-ის მეშვეობით
-    $books = $books->get();
-
-    // აბრუნებს index.blade.php შაბლონს წიგნების მონაცემებით
-    return view('books.index', ['books' => $books]);
-}
-
+    
+  }
 
     /**
      * Show the form for creating a new resource.
@@ -58,12 +57,22 @@ public function index(Request $request)
     }
 
     /**
-     * Display the specified resource.
+     * კონკრეტული წიგნის გამოტანა (ქეშირებით)
      */
-    public function show(string $id)
-    {
-        //
-    }
+   public function show(Book $book)
+ {
+    $cacheKey = 'book:' . $book->id;
+
+    $book = cache()->remember($cacheKey, 3600, function () use ($book) {
+        return $book->load([
+            'reviews' => fn($query) => $query->latest()
+        ])->loadAvg('reviews', 'rating')
+          ->loadCount('reviews');
+    });
+
+    return view('books.show', ['book' => $book]);
+  }
+    
 
     /**
      * Show the form for editing the specified resource.

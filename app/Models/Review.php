@@ -15,10 +15,22 @@ class Review extends Model
         'rating',
     ];
 
-    //  ფუნქციის სახელი უნდა იყოს book() (მხოლობითში)
-    //  Book::class უნდა დაიწყოს დიდი ასოთი
     public function book()
     {
         return $this->belongsTo(Book::class);
+    }
+     /**
+     * Eloquent Model Events — მოდელის სიცოცხლის ციკლის მოვლენებზე რეაგირება
+     */
+    protected static function booted()
+    {
+        // 1. Eloquent Event: როცა არსებული მიმოხილვა განახლდება (Updated), იშლება ამ წიგნის ქეში
+        static::updated(fn(Review $review) => cache()->forget('book:' . $review->book_id));
+
+        // 2. Eloquent Event: როცა ახალი მიმოხილვა დაემატება (Created), იშლება ამ წიგნის ქეში
+        static::created(fn(Review $review) => cache()->forget('book:' . $review->book_id));
+
+        // 3. Eloquent Event: როცა მიმოხილვა წაიშლება (Deleted), იშლება ამ წიგნის ქეში
+        static::deleted(fn(Review $review) => cache()->forget('book:' . $review->book_id));
     }
 }
